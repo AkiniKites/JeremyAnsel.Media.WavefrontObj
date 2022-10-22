@@ -20,7 +20,8 @@ namespace JeremyAnsel.Media.WavefrontObj
         {
             this.obj = obj;
 
-            this.GroupNames = new List<string>();
+            this.GroupNames = new List<string>(); 
+            this.Groups = new(StringComparer.Ordinal);
         }
 
         public string ObjectName { get; set; }
@@ -65,18 +66,19 @@ namespace JeremyAnsel.Media.WavefrontObj
 
         public IList<string> GroupNames { get; private set; }
 
+        public Dictionary<string, ObjGroup> Groups { get; }
+
         public IList<ObjGroup> GetCurrentGroups()
         {
             var groups = new List<ObjGroup>();
 
             foreach (var name in this.GroupNames)
             {
-                var group = obj.Groups.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.Ordinal));
-
-                if (group == null)
+                if (!Groups.TryGetValue(name, out var group))
                 {
                     group = new ObjGroup(name);
                     obj.Groups.Add(group);
+                    Groups.Add(name, group);
                 }
 
                 groups.Add(group);
