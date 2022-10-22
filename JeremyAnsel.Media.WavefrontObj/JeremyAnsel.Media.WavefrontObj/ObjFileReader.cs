@@ -924,7 +924,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new InvalidDataException("A triplet has too many values.");
             }
 
-            int v = !string.IsNullOrEmpty(values[0]) ? ParseInt(values[0]) : 0;
+            int v = values[0].Length > 0 ? ParseInt(values[0]) : 0;
 
             if (v == 0)
             {
@@ -941,7 +941,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new IndexOutOfRangeException();
             }
 
-            int vt = values.Length > 1 && !string.IsNullOrEmpty(values[1]) ? ParseInt(values[1]) : 0;
+            int vt = values.Length > 1 && values[1].Length > 0 ? ParseInt(values[1]) : 0;
 
             if (vt != 0)
             {
@@ -956,7 +956,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 }
             }
 
-            int vn = values.Length > 2 && !string.IsNullOrEmpty(values[2]) ? ParseInt(values[2]) : 0;
+            int vn = values.Length > 2 && values[2].Length > 0 ? ParseInt(values[2]) : 0;
 
             if (vn != 0)
             {
