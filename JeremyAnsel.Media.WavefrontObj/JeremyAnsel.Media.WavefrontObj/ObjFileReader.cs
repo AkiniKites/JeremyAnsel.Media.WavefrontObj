@@ -51,8 +51,10 @@ namespace JeremyAnsel.Media.WavefrontObj
             var context = new ObjFileReaderContext(obj);
             var lineReader = new LineReader();
 
-            foreach (var values in lineReader.Read(stream))
+            foreach (var textLine in lineReader.Read(stream))
             {
+                var values = textLine.Split(LineReader.LineSeparators, StringSplitOptions.RemoveEmptyEntries);
+
                 switch (values[0].ToLowerInvariant())
                 {
                     case "v":
@@ -677,12 +679,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             break;
                         }
 
-                        if (values.Length != 2)
-                        {
-                            throw new InvalidDataException("A o statement has too many values.");
-                        }
-
-                        context.ObjectName = values[1];
+                        context.ObjectName = textLine.Substring(1).Trim();
                         break;
 
                     case "bevel":

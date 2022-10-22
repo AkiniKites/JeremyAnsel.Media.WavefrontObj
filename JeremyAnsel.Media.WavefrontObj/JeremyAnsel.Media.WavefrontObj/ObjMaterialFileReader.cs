@@ -30,8 +30,10 @@ namespace JeremyAnsel.Media.WavefrontObj
 
             ObjMaterial currentMaterial = null;
 
-            foreach (var values in lineReader.Read(stream))
+            foreach (var textLine in lineReader.Read(stream))
             {
+                var values = textLine.Split(LineReader.LineSeparators, StringSplitOptions.RemoveEmptyEntries);
+
                 switch (values[0].ToLowerInvariant())
                 {
                     case "newmtl":
