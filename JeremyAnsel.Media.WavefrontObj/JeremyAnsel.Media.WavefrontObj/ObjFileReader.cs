@@ -12,19 +12,41 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using csFastFloat;
 
 namespace JeremyAnsel.Media.WavefrontObj
 {
-    internal static class ObjFileReader
+    internal class ObjFileReader
     {
+        private readonly char decimalSeparator;
+        private readonly NumberFormatInfo numberFormat;
+
+        public ObjFileReader(IFormatProvider formatProvider = null)
+        {
+            numberFormat = NumberFormatInfo.GetInstance(formatProvider);
+            if (numberFormat.NumberDecimalSeparator.Length > 1)
+                throw new ArgumentException("Not supported number format", nameof(formatProvider));
+
+            decimalSeparator = Convert.ToChar(numberFormat.NumberDecimalSeparator);
+        }
+
+        private float ParseFloat(string text)
+        {
+            return FastFloatParser.ParseFloat(text, NumberStyles.Float, decimalSeparator);
+        }
+        private int ParseInt(string text)
+        {
+            return int.Parse(text, NumberStyles.Integer, numberFormat);
+        }
+
         [SuppressMessage("Globalization", "CA1303:Ne pas passer de littéraux en paramètres localisés", Justification = "Reviewed.")]
-        public static ObjFile FromStream(Stream stream)
+        public ObjFile FromStream(Stream stream)
         {
             if (stream == null)
             {
                 throw new ArgumentNullException(nameof(stream));
             }
-
+            
             var obj = new ObjFile();
             var context = new ObjFileReaderContext(obj);
             var lineReader = new LineReader();
@@ -40,9 +62,9 @@ namespace JeremyAnsel.Media.WavefrontObj
                                 throw new InvalidDataException("A v statement must specify at least 3 values.");
                             }
 
-                            float x = float.Parse(values[1], CultureInfo.InvariantCulture);
-                            float y = float.Parse(values[2], CultureInfo.InvariantCulture);
-                            float z = float.Parse(values[3], CultureInfo.InvariantCulture);
+                            float x = ParseFloat(values[1]);
+                            float y = ParseFloat(values[2]);
+                            float z = ParseFloat(values[3]);
                             float w = 1.0f;
                             bool hasColor = false;
                             float r = 0.0f;
@@ -54,19 +76,19 @@ namespace JeremyAnsel.Media.WavefrontObj
                             {
                                 if (values.Length == 5)
                                 {
-                                    w = float.Parse(values[4], CultureInfo.InvariantCulture);
+                                    w = ParseFloat(values[4]);
                                 }
                             }
                             else if (values.Length == 7 || values.Length == 8)
                             {
                                 hasColor = true;
-                                r = float.Parse(values[4], CultureInfo.InvariantCulture);
-                                g = float.Parse(values[5], CultureInfo.InvariantCulture);
-                                b = float.Parse(values[6], CultureInfo.InvariantCulture);
+                                r = ParseFloat(values[4]);
+                                g = ParseFloat(values[5]);
+                                b = ParseFloat(values[6]);
 
                                 if (values.Length == 8)
                                 {
-                                    a = float.Parse(values[7], CultureInfo.InvariantCulture);
+                                    a = ParseFloat(values[7]);
                                 }
                             }
                             else
@@ -94,7 +116,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             }
 
                             var v = new ObjVector3();
-                            v.X = float.Parse(values[1], CultureInfo.InvariantCulture);
+                            v.X = ParseFloat(values[1]);
 
                             if (values.Length == 2)
                             {
@@ -103,13 +125,13 @@ namespace JeremyAnsel.Media.WavefrontObj
                             }
                             else if (values.Length == 3)
                             {
-                                v.Y = float.Parse(values[2], CultureInfo.InvariantCulture);
+                                v.Y = ParseFloat(values[2]);
                                 v.Z = 1.0f;
                             }
                             else if (values.Length == 4)
                             {
-                                v.Y = float.Parse(values[2], CultureInfo.InvariantCulture);
-                                v.Z = float.Parse(values[3], CultureInfo.InvariantCulture);
+                                v.Y = ParseFloat(values[2]);
+                                v.Z = ParseFloat(values[3]);
                             }
                             else
                             {
@@ -133,9 +155,9 @@ namespace JeremyAnsel.Media.WavefrontObj
                             }
 
                             var v = new ObjVector3();
-                            v.X = float.Parse(values[1], CultureInfo.InvariantCulture);
-                            v.Y = float.Parse(values[2], CultureInfo.InvariantCulture);
-                            v.Z = float.Parse(values[3], CultureInfo.InvariantCulture);
+                            v.X = ParseFloat(values[1]);
+                            v.Y = ParseFloat(values[2]);
+                            v.Z = ParseFloat(values[3]);
 
                             obj.VertexNormals.Add(v);
                             break;
@@ -149,7 +171,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             }
 
                             var v = new ObjVector3();
-                            v.X = float.Parse(values[1], CultureInfo.InvariantCulture);
+                            v.X = ParseFloat(values[1]);
 
                             if (values.Length == 2)
                             {
@@ -158,13 +180,13 @@ namespace JeremyAnsel.Media.WavefrontObj
                             }
                             else if (values.Length == 3)
                             {
-                                v.Y = float.Parse(values[2], CultureInfo.InvariantCulture);
+                                v.Y = ParseFloat(values[2]);
                                 v.Z = 0.0f;
                             }
                             else if (values.Length == 4)
                             {
-                                v.Y = float.Parse(values[2], CultureInfo.InvariantCulture);
-                                v.Z = float.Parse(values[3], CultureInfo.InvariantCulture);
+                                v.Y = ParseFloat(values[2]);
+                                v.Z = ParseFloat(values[3]);
                             }
                             else
                             {
@@ -176,7 +198,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                         }
 
                     case "cstype":
-                        ObjFileReader.ParseFreeFormType(context, values);
+                        ParseFreeFormType(context, values);
                         break;
 
                     case "deg":
@@ -187,13 +209,13 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                         if (values.Length == 2)
                         {
-                            context.DegreeU = int.Parse(values[1], CultureInfo.InvariantCulture);
+                            context.DegreeU = ParseInt(values[1]);
                             context.DegreeV = 0;
                         }
                         else if (values.Length == 3)
                         {
-                            context.DegreeU = int.Parse(values[1], CultureInfo.InvariantCulture);
-                            context.DegreeV = int.Parse(values[2], CultureInfo.InvariantCulture);
+                            context.DegreeU = ParseInt(values[1]);
+                            context.DegreeV = ParseInt(values[2]);
                         }
                         else
                         {
@@ -235,7 +257,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             for (int i = 0; i < count; i++)
                             {
-                                matrix[i] = float.Parse(values[2 + i], CultureInfo.InvariantCulture);
+                                matrix[i] = ParseFloat(values[2 + i]);
                             }
 
                             switch (d)
@@ -260,13 +282,13 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                         if (values.Length == 2)
                         {
-                            context.StepU = float.Parse(values[1], CultureInfo.InvariantCulture);
+                            context.StepU = ParseFloat(values[1]);
                             context.StepV = 1.0f;
                         }
                         else if (values.Length == 3)
                         {
-                            context.StepU = float.Parse(values[1], CultureInfo.InvariantCulture);
-                            context.StepV = float.Parse(values[2], CultureInfo.InvariantCulture);
+                            context.StepU = ParseFloat(values[1]);
+                            context.StepV = ParseFloat(values[2]);
                         }
                         else
                         {
@@ -286,7 +308,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             for (int i = 1; i < values.Length; i++)
                             {
-                                point.Vertices.Add(ObjFileReader.ParseTriplet(obj, values[i]));
+                                point.Vertices.Add(ParseTriplet(obj, values[i]));
                             }
 
                             context.ApplyAttributesToElement(point);
@@ -313,7 +335,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             for (int i = 1; i < values.Length; i++)
                             {
-                                line.Vertices.Add(ObjFileReader.ParseTriplet(obj, values[i]));
+                                line.Vertices.Add(ParseTriplet(obj, values[i]));
                             }
 
                             context.ApplyAttributesToElement(line);
@@ -341,7 +363,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             for (int i = 1; i < values.Length; i++)
                             {
-                                face.Vertices.Add(ObjFileReader.ParseTriplet(obj, values[i]));
+                                face.Vertices.Add(ParseTriplet(obj, values[i]));
                             }
 
                             context.ApplyAttributesToElement(face);
@@ -366,12 +388,12 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             var curve = new ObjCurve();
 
-                            curve.StartParameter = float.Parse(values[1], CultureInfo.InvariantCulture);
-                            curve.EndParameter = float.Parse(values[2], CultureInfo.InvariantCulture);
+                            curve.StartParameter = ParseFloat(values[1]);
+                            curve.EndParameter = ParseFloat(values[2]);
 
                             for (int i = 3; i < values.Length; i++)
                             {
-                                int v = int.Parse(values[i], CultureInfo.InvariantCulture);
+                                int v = ParseInt(values[i]);
 
                                 if (v == 0)
                                 {
@@ -416,7 +438,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             for (int i = 1; i < values.Length; i++)
                             {
-                                int vp = int.Parse(values[i], CultureInfo.InvariantCulture);
+                                int vp = ParseInt(values[i]);
 
                                 if (vp == 0)
                                 {
@@ -459,14 +481,14 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                             var surface = new ObjSurface();
 
-                            surface.StartParameterU = float.Parse(values[1], CultureInfo.InvariantCulture);
-                            surface.EndParameterU = float.Parse(values[2], CultureInfo.InvariantCulture);
-                            surface.StartParameterV = float.Parse(values[3], CultureInfo.InvariantCulture);
-                            surface.EndParameterV = float.Parse(values[4], CultureInfo.InvariantCulture);
+                            surface.StartParameterU = ParseFloat(values[1]);
+                            surface.EndParameterU = ParseFloat(values[2]);
+                            surface.StartParameterV = ParseFloat(values[3]);
+                            surface.EndParameterV = ParseFloat(values[4]);
 
                             for (int i = 5; i < values.Length; i++)
                             {
-                                surface.Vertices.Add(ObjFileReader.ParseTriplet(obj, values[i]));
+                                surface.Vertices.Add(ParseTriplet(obj, values[i]));
                             }
 
                             context.ApplyAttributesToElement(surface);
@@ -511,7 +533,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                         for (int i = 2; i < values.Length; i++)
                         {
-                            parameters.Add(float.Parse(values[i], CultureInfo.InvariantCulture));
+                            parameters.Add(ParseFloat(values[i]));
                         }
 
                         break;
@@ -522,7 +544,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             break;
                         }
 
-                        ObjFileReader.ParseCurveIndex(context.CurrentFreeFormElement.OuterTrimmingCurves, obj, values);
+                        ParseCurveIndex(context.CurrentFreeFormElement.OuterTrimmingCurves, obj, values);
                         break;
 
                     case "hole":
@@ -531,7 +553,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             break;
                         }
 
-                        ObjFileReader.ParseCurveIndex(context.CurrentFreeFormElement.InnerTrimmingCurves, obj, values);
+                        ParseCurveIndex(context.CurrentFreeFormElement.InnerTrimmingCurves, obj, values);
                         break;
 
                     case "scrv":
@@ -540,7 +562,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             break;
                         }
 
-                        ObjFileReader.ParseCurveIndex(context.CurrentFreeFormElement.SequenceCurves, obj, values);
+                        ParseCurveIndex(context.CurrentFreeFormElement.SequenceCurves, obj, values);
                         break;
 
                     case "sp":
@@ -556,7 +578,7 @@ namespace JeremyAnsel.Media.WavefrontObj
 
                         for (int i = 1; i < values.Length; i++)
                         {
-                            int vp = int.Parse(values[i], CultureInfo.InvariantCulture);
+                            int vp = ParseInt(values[i]);
 
                             if (vp == 0)
                             {
@@ -583,11 +605,11 @@ namespace JeremyAnsel.Media.WavefrontObj
                         break;
 
                     case "con":
-                        ObjFileReader.ParseSurfaceConnection(obj, values);
+                        ParseSurfaceConnection(obj, values);
                         break;
 
                     case "g":
-                        ObjFileReader.ParseGroupName(values, context);
+                        ParseGroupName(values, context);
                         break;
 
                     case "s":
@@ -607,7 +629,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                         }
                         else
                         {
-                            context.SmoothingGroupNumber = int.Parse(values[1], CultureInfo.InvariantCulture);
+                            context.SmoothingGroupNumber = ParseInt(values[1]);
                         }
 
                         break;
@@ -624,7 +646,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                         }
                         else
                         {
-                            context.MergingGroupNumber = int.Parse(values[1], CultureInfo.InvariantCulture);
+                            context.MergingGroupNumber = ParseInt(values[1]);
                         }
 
                         if (context.MergingGroupNumber == 0)
@@ -641,7 +663,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                                 throw new InvalidDataException("A mg statement has too many or too few values.");
                             }
 
-                            float res = float.Parse(values[2], CultureInfo.InvariantCulture);
+                            float res = ParseFloat(values[2]);
 
                             obj.MergingGroupResolutions[context.MergingGroupNumber] = res;
                         }
@@ -752,7 +774,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException("A lod statement has too many values.");
                         }
 
-                        context.LevelOfDetail = int.Parse(values[1], CultureInfo.InvariantCulture);
+                        context.LevelOfDetail = ParseInt(values[1]);
                         break;
 
                     case "maplib":
@@ -874,11 +896,11 @@ namespace JeremyAnsel.Media.WavefrontObj
                         break;
 
                     case "ctech":
-                        context.CurveApproximationTechnique = ObjFileReader.ParseApproximationTechnique(values);
+                        context.CurveApproximationTechnique = ParseApproximationTechnique(values);
                         break;
 
                     case "stech":
-                        context.SurfaceApproximationTechnique = ObjFileReader.ParseApproximationTechnique(values);
+                        context.SurfaceApproximationTechnique = ParseApproximationTechnique(values);
                         break;
 
                     case "bsp":
@@ -896,7 +918,7 @@ namespace JeremyAnsel.Media.WavefrontObj
         }
 
         [SuppressMessage("Globalization", "CA1303:Ne pas passer de littéraux en paramètres localisés", Justification = "Reviewed.")]
-        private static ObjTriplet ParseTriplet(ObjFile obj, string value)
+        private ObjTriplet ParseTriplet(ObjFile obj, string value)
         {
             var values = value.Split('/');
 
@@ -905,7 +927,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new InvalidDataException("A triplet has too many values.");
             }
 
-            int v = !string.IsNullOrEmpty(values[0]) ? int.Parse(values[0], CultureInfo.InvariantCulture) : 0;
+            int v = !string.IsNullOrEmpty(values[0]) ? ParseInt(values[0]) : 0;
 
             if (v == 0)
             {
@@ -922,7 +944,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new IndexOutOfRangeException();
             }
 
-            int vt = values.Length > 1 && !string.IsNullOrEmpty(values[1]) ? int.Parse(values[1], CultureInfo.InvariantCulture) : 0;
+            int vt = values.Length > 1 && !string.IsNullOrEmpty(values[1]) ? ParseInt(values[1]) : 0;
 
             if (vt != 0)
             {
@@ -937,7 +959,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 }
             }
 
-            int vn = values.Length > 2 && !string.IsNullOrEmpty(values[2]) ? int.Parse(values[2], CultureInfo.InvariantCulture) : 0;
+            int vn = values.Length > 2 && !string.IsNullOrEmpty(values[2]) ? ParseInt(values[2]) : 0;
 
             if (vn != 0)
             {
@@ -956,11 +978,11 @@ namespace JeremyAnsel.Media.WavefrontObj
         }
 
         [SuppressMessage("Globalization", "CA1303:Ne pas passer de littéraux en paramètres localisés", Justification = "Reviewed.")]
-        private static ObjCurveIndex ParseCurveIndex(ObjFile obj, string[] values, int index)
+        private ObjCurveIndex ParseCurveIndex(ObjFile obj, string[] values, int index)
         {
-            float start = float.Parse(values[index], CultureInfo.InvariantCulture);
-            float end = float.Parse(values[index + 1], CultureInfo.InvariantCulture);
-            int curve2D = int.Parse(values[index + 2], CultureInfo.InvariantCulture);
+            float start = ParseFloat(values[index]);
+            float end = ParseFloat(values[index + 1]);
+            int curve2D = ParseInt(values[index + 2]);
 
             if (curve2D == 0)
             {
@@ -980,7 +1002,7 @@ namespace JeremyAnsel.Media.WavefrontObj
             return new ObjCurveIndex(start, end, curve2D);
         }
 
-        private static void ParseCurveIndex(IList<ObjCurveIndex> curves, ObjFile obj, string[] values)
+        private void ParseCurveIndex(IList<ObjCurveIndex> curves, ObjFile obj, string[] values)
         {
             if (values.Length < 4)
             {
@@ -994,12 +1016,12 @@ namespace JeremyAnsel.Media.WavefrontObj
 
             for (int i = 1; i < values.Length; i += 3)
             {
-                curves.Add(ObjFileReader.ParseCurveIndex(obj, values, i));
+                curves.Add(ParseCurveIndex(obj, values, i));
             }
         }
 
         [SuppressMessage("Globalization", "CA1303:Ne pas passer de littéraux en paramètres localisés", Justification = "Reviewed.")]
-        private static void ParseFreeFormType(ObjFileReaderContext context, string[] values)
+        private void ParseFreeFormType(ObjFileReaderContext context, string[] values)
         {
             if (values.Length < 2)
             {
@@ -1051,7 +1073,7 @@ namespace JeremyAnsel.Media.WavefrontObj
         }
 
         [SuppressMessage("Globalization", "CA1303:Ne pas passer de littéraux en paramètres localisés", Justification = "Reviewed.")]
-        private static void ParseSurfaceConnection(ObjFile obj, string[] values)
+        private void ParseSurfaceConnection(ObjFile obj, string[] values)
         {
             if (values.Length < 9)
             {
@@ -1063,7 +1085,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new InvalidDataException("A con statement has too many values.");
             }
 
-            int surface1 = int.Parse(values[1], CultureInfo.InvariantCulture);
+            int surface1 = ParseInt(values[1]);
 
             if (surface1 == 0)
             {
@@ -1080,9 +1102,9 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new IndexOutOfRangeException();
             }
 
-            var curve1 = ObjFileReader.ParseCurveIndex(obj, values, 2);
+            var curve1 = ParseCurveIndex(obj, values, 2);
 
-            int surface2 = int.Parse(values[5], CultureInfo.InvariantCulture);
+            int surface2 = ParseInt(values[5]);
 
             if (surface2 == 0)
             {
@@ -1099,7 +1121,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                 throw new IndexOutOfRangeException();
             }
 
-            var curve2 = ObjFileReader.ParseCurveIndex(obj, values, 6);
+            var curve2 = ParseCurveIndex(obj, values, 6);
 
             var connection = new ObjSurfaceConnection
             {
@@ -1112,7 +1134,7 @@ namespace JeremyAnsel.Media.WavefrontObj
             obj.SurfaceConnections.Add(connection);
         }
 
-        private static void ParseGroupName(string[] values, ObjFileReaderContext context)
+        private void ParseGroupName(string[] values, ObjFileReaderContext context)
         {
             context.GroupNames.Clear();
 
@@ -1129,7 +1151,7 @@ namespace JeremyAnsel.Media.WavefrontObj
             context.GetCurrentGroups();
         }
 
-        private static ObjApproximationTechnique ParseApproximationTechnique(string[] values)
+        private ObjApproximationTechnique ParseApproximationTechnique(string[] values)
         {
             ObjApproximationTechnique technique = null;
 
@@ -1152,7 +1174,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException(string.Concat("A ", values[0], " cparm statement has too many values."));
                         }
 
-                        float res = float.Parse(values[2], CultureInfo.InvariantCulture);
+                        float res = ParseFloat(values[2]);
                         technique = new ObjConstantParametricSubdivisionTechnique(res);
                         break;
                     }
@@ -1169,8 +1191,8 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException(string.Concat("A ", values[0], " cparma statement has too many values."));
                         }
 
-                        float resU = float.Parse(values[2], CultureInfo.InvariantCulture);
-                        float resV = float.Parse(values[3], CultureInfo.InvariantCulture);
+                        float resU = ParseFloat(values[2]);
+                        float resV = ParseFloat(values[3]);
                         technique = new ObjConstantParametricSubdivisionTechnique(resU, resV);
                         break;
                     }
@@ -1187,7 +1209,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException(string.Concat("A ", values[0], " cparmb statement has too many values."));
                         }
 
-                        float resU = float.Parse(values[2], CultureInfo.InvariantCulture);
+                        float resU = ParseFloat(values[2]);
                         technique = new ObjConstantParametricSubdivisionTechnique(resU);
                         break;
                     }
@@ -1204,7 +1226,7 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException(string.Concat("A ", values[0], " cspace statement has too many values."));
                         }
 
-                        float length = float.Parse(values[2], CultureInfo.InvariantCulture);
+                        float length = ParseFloat(values[2]);
                         technique = new ObjConstantSpatialSubdivisionTechnique(length);
                         break;
                     }
@@ -1221,8 +1243,8 @@ namespace JeremyAnsel.Media.WavefrontObj
                             throw new InvalidDataException(string.Concat("A ", values[0], " curv statement has too many values."));
                         }
 
-                        float distance = float.Parse(values[2], CultureInfo.InvariantCulture);
-                        float angle = float.Parse(values[3], CultureInfo.InvariantCulture);
+                        float distance = ParseFloat(values[2]);
+                        float angle = ParseFloat(values[3]);
                         technique = new ObjCurvatureDependentSubdivisionTechnique(distance, angle);
                         break;
                     }

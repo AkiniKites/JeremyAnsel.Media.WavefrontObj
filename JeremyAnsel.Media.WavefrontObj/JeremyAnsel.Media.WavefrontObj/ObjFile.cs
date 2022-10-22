@@ -73,17 +73,19 @@ namespace JeremyAnsel.Media.WavefrontObj
 
         public string TraceObjectFileName { get; set; }
 
-        public static ObjFile FromFile(string path)
+        public static ObjFile FromFile(string path, IFormatProvider formatProvider = null)
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                return ObjFileReader.FromStream(stream);
+                var reader = new ObjFileReader(formatProvider);
+                return reader.FromStream(stream);
             }
         }
 
-        public static ObjFile FromStream(Stream stream)
+        public static ObjFile FromStream(Stream stream, IFormatProvider formatProvider = null)
         {
-            return ObjFileReader.FromStream(stream);
+            var reader = new ObjFileReader(formatProvider);
+            return reader.FromStream(stream);
         }
 
         public void WriteTo(string path)
